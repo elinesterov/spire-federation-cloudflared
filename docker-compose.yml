@@ -1,0 +1,37 @@
+version: "3.7"
+networks:
+  federation:
+    name: federation
+services:
+  envoy:
+    container_name: envoy
+    networks:
+      federation:
+    image: envoyproxy/envoy:v1.21-latest
+    volumes:
+    - ./envoy.yaml:/etc/envoy/envoy.yaml
+    ports:
+      - "8080:8080"
+
+  spire:
+    container_name: spire
+    networks:
+      federation:
+    image: spire-server:latest
+    volumes:
+      - ./server.conf:/opt/spire/conf/server/server.conf
+      - ./dummy_upstream_ca.key:/opt/spire/conf/server/dummy_upstream_ca.key
+      - ./dummy_upstream_ca.crt:/opt/spire/conf/server/dummy_upstream_ca.crt
+    restart: on-failure
+    ports:
+      - "8081:8081"
+      - "8443:8443"
+
+  cloudflared:
+    container_name: cloudflared
+    networks:
+      federation:
+    image: cloudflare/cloudflared:latest
+    #todo: delete or comment this line after you update your_token value with the real one below
+    #command: "tunnel --no-autoupdate run --token your_token"
+    command: "tunnel --no-autoupdate --url http://envoy:8080"
